@@ -18,24 +18,29 @@ const sequelize = new Sequelize(dbConfig.database, dbConfig.username, dbConfig.p
   dialect: dbConfig.dialect,
 });
 
-async function readCSVAndInsertData(filePath) {
+async function readCSVAndInsertData() {
   const results = [];
+  const batchSize = 100;
 
-  fs.createReadStream(filePath || csvFilePath)
+  fs.createReadStream(csvFilePath)
     .pipe(csv())
     .on('data', (data) => {
-      // Assuming 'data' is an object with a 'publicationYear' property among others
-      data.publicationYear = parseInt(data.publicationYear, 10); // Convert publicationYear to integer
+      data.publicationYear = parseInt(data.publicationYear, 10);
       results.push(data);
+
+      if (results.length >= batchSize) {
+        Book.bulkCreate(results.splice(0, batchSize))
+          .then(() => console.log('Batch has been inserted successfully.'))
+          .catch((error) => console.error('Error inserting batch:', error));
+      }
     })
     .on('end', () => {
-      // Insert data into the database
-      Book.bulkCreate(results)
-        .then(() => console.log('Data has been inserted successfully.'))
-        .catch((error) => console.error('Error inserting data:', error));
+      if (results.length > 0) {
+        Book.bulkCreate(results)
+          .then(() => console.log('Final batch has been inserted successfully.'))
+          .catch((error) => console.error('Error inserting final batch:', error));
+      }
     });
 }
-
-exports = module.exports = readCSVAndInsertData;
 
 readCSVAndInsertData(csvFilePath);

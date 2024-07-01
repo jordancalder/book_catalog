@@ -50,3 +50,7 @@ To run the project, you need to start both the backend server and the frontend a
   ```
 
 After starting both the backend and frontend, you should be able to access the web application by navigating to `http://localhost:3000` in your web browser.
+
+## Ingesting Data
+
+From the root, run `npm run ingest-books -- path/to/your/file.csv`. The file should have the format title,author,ISBN,publicationYear.
