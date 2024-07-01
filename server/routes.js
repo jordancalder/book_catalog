@@ -1,5 +1,5 @@
 const express = require('express');
-const { Book } = require('./models');
+const { Book, Rating } = require('./models');
 const router = express.Router();
 const { Op } = require('sequelize');
 
@@ -47,16 +47,53 @@ router.get('/books', async (req, res) => {
   }
 });
 
-// Update book rating
-router.put('/books/:id/rating', async (req, res) => {
-  try {
-    const book = await Book.findByPk(req.params.id);
-    if (book) {
-      const updatedBook = await book.update({ rating: req.body.rating });
-      res.json(updatedBook);
-    } else {
-      res.status(404).send('Book not found');
+router.get('/books/:id', async (req, res) => { 
+  const book = await Book.findByPk(req.params.id, {
+    include: [{
+      model: Rating,
+      as: 'ratings'
+    }]
+  });
+  if (book) {
+    let averageRating = 0;
+    if (book.ratings.length > 0) {
+      const totalRating = book.ratings.reduce((acc, rating) => acc + rating.rating, 0);
+      averageRating = totalRating / book.ratings.length;
     }
+    book.dataValues.averageRating = averageRating;
+
+    res.json(book);
+  } else {
+    res.status(404).send('Book not found');
+  }
+});
+
+// Update book rating
+router.post('/books/:id/rating', async (req, res) => {
+  try {
+    const bookId = req.params.id;
+    const { rating } = req.body;
+
+    const book = await Book.findByPk(bookId);
+    if (!book) {
+      return res.status(404).send('Book not found');
+    }
+
+    const newRating = await Rating.create({
+      bookId,
+      rating,
+    });
+
+    const bookRatings = await Rating.findAll({
+      where: {
+        bookId,
+      },
+    });
+
+    const totalRating = bookRatings.reduce((acc, rating) => acc + rating.rating, 0);
+    const averageRating = totalRating / bookRatings.length;
+
+    res.json({ averageRating, ...newRating });
   } catch (error) {
     res.status(500).send(error.message);
   }

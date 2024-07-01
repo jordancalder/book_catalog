@@ -12,7 +12,7 @@ function App() {
         </header>
         <Routes>
           <Route path="/" element={<BookList />} />
-          <Route path="/book/:id" element={<BookDetail />} />
+          <Route path="/books/:id" element={<BookDetail />} />
         </Routes>
       </div>
     </BrowserRouter>

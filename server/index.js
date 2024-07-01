@@ -6,6 +6,8 @@ const routes = require('./routes');
 const PORT = process.env.PORT || 3001;
 
 const app = express();
+app.use(express.json());
+app.use('/api', routes);
 
 const env = process.env.NODE_ENV || 'development';
 const dbConfig = config[env];
@@ -14,9 +16,6 @@ const sequelize = new Sequelize(dbConfig.database, dbConfig.username, dbConfig.p
   host: dbConfig.host,
   dialect: dbConfig.dialect
 });
-
-app.use(express.json());
-app.use('/api', routes);
 
 async function testDatabaseConnection() {
   try {
