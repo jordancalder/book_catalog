@@ -1,6 +1,7 @@
 const express = require("express");
 const { Sequelize } = require("sequelize");
 const config = require("./config/config.json");
+const routes = require('./routes');
 
 const PORT = process.env.PORT || 3001;
 
@@ -13,6 +14,9 @@ const sequelize = new Sequelize(dbConfig.database, dbConfig.username, dbConfig.p
   host: dbConfig.host,
   dialect: dbConfig.dialect
 });
+
+app.use(express.json());
+app.use('/api', routes);
 
 async function testDatabaseConnection() {
   try {
