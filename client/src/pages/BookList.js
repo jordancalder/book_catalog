@@ -1,9 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useFetchBooks } from '../hooks/useFetchBooks';
 
 export default function BookList() {
   const [currentPage, setCurrentPage] = useState(1);
-  const { data, loading, error } = useFetchBooks({ currentPage, searchTerm: '' });
+  const [inputValue, setInputValue] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+
+  const { data, loading, error } = useFetchBooks({ currentPage, searchTerm: debouncedSearchTerm });
+
+  const handleInputChange = (e) => {
+    setInputValue(e.target.value);
+  };
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchTerm(inputValue);
+    }, 500);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [inputValue]);
 
   const goToNextPage = () => setCurrentPage((prevPage) => prevPage + 1);
   const goToPreviousPage = () => setCurrentPage((prevPage) => prevPage - 1);
@@ -14,10 +31,16 @@ export default function BookList() {
   return (
     <div>
       <h2>Book List</h2>
+      <input
+        type="text"
+        value={inputValue}
+        onChange={handleInputChange}
+        placeholder="Search books..."
+      />
       <ul>
         {data?.books.map((book) => (
           <li key={book.id}>
-            {book.title} by {book.author} ({book.publicationYear}) - ISBN: {book.isbn}
+            {book.title} by {book.author} ({book.publicationYear}) - ISBN: {book.ISBN}
           </li>
         ))}
       </ul>

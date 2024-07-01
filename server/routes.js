@@ -3,16 +3,20 @@ const { Book, Rating } = require('./models');
 const router = express.Router();
 const { Op } = require('sequelize');
 
-async function getBooksFromDatabase({ searchTerm, skip, limit }) {
+async function getBooksFromDatabase({ search, skip, limit }) {
   let whereCondition = {};
-  if (searchTerm) {
-    whereCondition = {
-      [Op.or]: [
-        { author: { [Op.like]: `%${searchTerm}%` } },
-        { title: { [Op.like]: `%${searchTerm}%` } },
-        { ISBN: { [Op.like]: `%${searchTerm}%` } }
-      ]
-    };
+  if (search) {
+    const parsedSearch = parseInt(search);
+    if (isNaN(parsedSearch)) {
+      whereCondition = {
+        [Op.or]: [
+          { author: { [Op.iLike]: `%${search}%` } },
+          { title: { [Op.iLike]: `%${search}%` } },
+        ]
+      };
+    } else {
+      whereCondition = { ISBN: parsedSearch }
+    }
   }
   const fetchBooks = Book.findAll({
     where: whereCondition,
@@ -30,11 +34,11 @@ async function getBooksFromDatabase({ searchTerm, skip, limit }) {
 router.get('/books', async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10; 
-  const { searchTerm } = req.query;
+  const { search = '' } = req.query;
   const skip = (page - 1) * limit;
 
   try {
-    const { data, totalCount } = await getBooksFromDatabase({ searchTerm, skip, limit});
+    const { data, totalCount } = await getBooksFromDatabase({ search, skip, limit});
     res.json({
       page,
       limit,
