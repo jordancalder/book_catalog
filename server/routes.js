@@ -2,6 +2,7 @@ const express = require('express');
 const { Book, Rating } = require('./models');
 const router = express.Router();
 const { Op } = require('sequelize');
+const Joi = require('joi');
 
 async function getBooksFromDatabase({ search, skip, limit }) {
   let whereCondition = {};
@@ -31,14 +32,26 @@ async function getBooksFromDatabase({ search, skip, limit }) {
   return { data, totalCount };
 }
 
+const querySchema = Joi.object({
+  page: Joi.number().integer().min(1),
+  limit: Joi.number().integer().min(1).max(100),
+  search: Joi.string().trim().allow('').optional()
+    .regex(/^[a-zA-Z0-9\s]+$/)
+    .message('Search term contains invalid characters'),
+});
+
 router.get('/books', async (req, res) => {
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 10; 
-  const { search = '' } = req.query;
+  // Validate and sanitize the request query
+  const { error, value } = querySchema.validate(req.query, { abortEarly: false, stripUnknown: true });
+  if (error) {
+    return res.status(400).json({ message: 'Validation error', details: error.details });
+  }
+
+  const { page = 1, limit = 10, search = '' } = value;
   const skip = (page - 1) * limit;
 
   try {
-    const { data, totalCount } = await getBooksFromDatabase({ search, skip, limit});
+    const { data, totalCount } = await getBooksFromDatabase({ search, skip, limit });
     res.json({
       page,
       limit,
@@ -72,11 +85,19 @@ router.get('/books/:id', async (req, res) => {
   }
 });
 
+const ratingSchema = Joi.object({
+  rating: Joi.number().min(1).max(5).required(),
+});
+
 // Update book rating
 router.post('/books/:id/rating', async (req, res) => {
   try {
+    const { error, value } = ratingSchema.validate(req.body);
+    if (error) {
+      return res.status(400).send(error.details[0].message);
+    }
     const bookId = req.params.id;
-    const { rating } = req.body;
+    const { rating } = value;
 
     const book = await Book.findByPk(bookId);
     if (!book) {
