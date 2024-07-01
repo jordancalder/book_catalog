@@ -3,36 +3,47 @@ const { Book } = require('./models');
 const router = express.Router();
 const { Op } = require('sequelize');
 
-// List all books
-router.get('/books', async (req, res) => {
-  try {
-    const books = await Book.findAll();
-    res.json(books);
-  } catch (error) {
-    res.status(500).send(error.message);
+async function getBooksFromDatabase({ searchTerm, skip, limit }) {
+  let whereCondition = {};
+  if (searchTerm) {
+    whereCondition = {
+      [Op.or]: [
+        { author: { [Op.like]: `%${searchTerm}%` } },
+        { title: { [Op.like]: `%${searchTerm}%` } },
+        { ISBN: { [Op.like]: `%${searchTerm}%` } }
+      ]
+    };
   }
-});
+  const fetchBooks = Book.findAll({
+    where: whereCondition,
+    offset: skip,
+    limit: limit,
+  });
+  const countTotal = Book.count({
+    where: whereCondition,
+  });
+  const [data, totalCount] = await Promise.all([fetchBooks, countTotal]);
 
-// Search for a book by title, author, or ISBN
-router.get('/books/search', async (req, res) => {
-  const { query } = req.query;
+  return { data, totalCount };
+}
+
+router.get('/books', async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10; 
+  const { searchTerm } = req.query;
+  const skip = (page - 1) * limit;
+
   try {
-    const books = await Book.findAll({
-      where: {
-        [Op.or]: [
-          { title: { [Op.like]: `%${query}%` } },
-          { author: { [Op.like]: `%${query}%` } },
-          { isbn: { [Op.like]: `%${query}%` } }
-        ]
-      }
+    const { data, totalCount } = await getBooksFromDatabase({ searchTerm, skip, limit});
+    res.json({
+      page,
+      limit,
+      totalCount,
+      totalPages: Math.ceil(totalCount / limit),
+      data,
     });
-    if (books.length) {
-      res.json(books);
-    } else {
-      res.status(404).send('No books found matching the criteria');
-    }
   } catch (error) {
-    res.status(500).send(error.message);
+    res.status(500).json({ message: 'Error fetching books', error: error.message });
   }
 });
 
