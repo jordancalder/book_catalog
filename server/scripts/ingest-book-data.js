@@ -21,7 +21,7 @@ const sequelize = new Sequelize(dbConfig.database, dbConfig.username, dbConfig.p
 async function readCSVAndInsertData(filePath) {
   const results = [];
 
-  fs.createReadStream(csvFilePath)
+  fs.createReadStream(filePath || csvFilePath)
     .pipe(csv())
     .on('data', (data) => {
       // Assuming 'data' is an object with a 'publicationYear' property among others
@@ -35,5 +35,7 @@ async function readCSVAndInsertData(filePath) {
         .catch((error) => console.error('Error inserting data:', error));
     });
 }
+
+exports = module.exports = readCSVAndInsertData;
 
 readCSVAndInsertData(csvFilePath);
